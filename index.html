@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Test Automation Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.5.27/jsrsasign-all-min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- HEADER -->
+    <header class="app-header">
+      <div class="header-logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="5" width="20" height="14" rx="2" ry="2" />
+          <line x1="2" y1="10" x2="22" y2="10" />
+        </svg>
+        <h1>Antigravity <span>TestLabs</span></h1>
+      </div>
+      
+      <div class="stats-panel">
+        <div class="stat-box">
+          <span class="stat-value" id="stat-total">0</span>
+          <span class="stat-label">Total Tests</span>
+        </div>
+        <div class="stat-box pass">
+          <span class="stat-value" id="stat-passed">0</span>
+          <span class="stat-label">Passed</span>
+        </div>
+        <div class="stat-box fail">
+          <span class="stat-value" id="stat-failed">0</span>
+          <span class="stat-label">Failed</span>
+        </div>
+        <div class="stat-box running">
+          <span class="stat-value" id="stat-running">0</span>
+          <span class="stat-label">Running</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btn-run-all" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+          Run All Suite
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN BODY -->
+    <div class="app-body">
+      
+      <!-- SIDEBAR: TEST CASE LIST -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h2>Test Cases</h2>
+          <button id="btn-add-test" class="btn-icon" title="Add New Test Case">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all">All</button>
+          <button class="filter-tab" data-filter="iso8583">ISO8583</button>
+          <button class="filter-tab" data-filter="http_post">HTTP POST</button>
+        </div>
+
+        <div class="test-list" id="test-list-container">
+          <!-- Dynamically populated -->
+        </div>
+      </aside>
+
+      <!-- CENTER CONTENT: CONFIGURATION / EDITING -->
+      <main class="workspace">
+        <div id="no-selection-screen" class="empty-state">
+          <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+          <h3>No Test Case Selected</h3>
+          <p>Choose an existing test case from the sidebar or create a new one to begin editing and automated runner diagnostics.</p>
+          <button id="btn-create-first" class="btn btn-secondary">Create Test Case</button>
+        </div>
+
+        <div id="workspace-content" class="workspace-form-container" style="display: none;">
+          <div class="workspace-header">
+            <div class="title-section">
+              <span id="case-badge" class="badge">ISO8583</span>
+              <input type="text" id="case-name" class="input-title" placeholder="Test Case Name">
+              <input type="text" id="case-description" class="input-desc" placeholder="Add detailed description...">
+            </div>
+            <div class="action-buttons">
+              <button id="btn-delete" class="btn btn-danger-outline">Delete</button>
+              <button id="btn-save" class="btn btn-secondary">Save Case</button>
+              <button id="btn-run" class="btn btn-primary">Run Test</button>
+            </div>
+          </div>
+
+          <div class="config-tabs-container">
+            <div class="form-group row-inline">
+              <label for="case-type-select">Test Type:</label>
+              <select id="case-type-select">
+                <option value="iso8583">ISO8583 (POS Transaction)</option>
+                <option value="http_post">HTTP POST (Ecommerce Transaction)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ISO8583 CONFIG FORM -->
+          <div id="form-iso8583" class="test-form">
+            <div class="form-section">
+              <h3>Connection Settings</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="iso-host">Host IP Address</label>
+                  <input type="text" id="iso-host" value="127.0.0.1">
+                </div>
+                <div class="form-group">
+                  <label for="iso-port">TCP Port</label>
+                  <input type="number" id="iso-port" value="8583">
+                </div>
+                <div class="form-group">
+                  <label for="iso-header-type">Header Length Encoding</label>
+                  <select id="iso-header-type">
+                    <option value="binary">2-byte Binary (Default)</option>
+                    <option value="ascii">4-byte ASCII</option>
+                    <option value="none">None (Raw Message)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="iso-bitmap-type">Bitmap Encoding</label>
+                  <select id="iso-bitmap-type">
+                    <option value="hex">HEX Representation (16/32 bytes ASCII)</option>
+                    <option value="binary">Binary Representation (8/16 bytes raw)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="section-title-with-action">
+                <h3>Message Data Fields</h3>
+                <div class="form-group row-inline" style="margin-bottom: 0;">
+                  <label for="iso-mti">MTI:</label>
+                  <input type="text" id="iso-mti" class="input-mti" value="0200" maxlength="4" style="width: 70px; text-align: center; font-weight: bold; font-family: monospace;">
+                </div>
+              </div>
+              
+              <div class="fields-table-container">
+                <table class="fields-table" id="iso-fields-table">
+                  <thead>
+                    <tr>
+                      <th width="80px">Field #</th>
+                      <th>Field Description</th>
+                      <th>Value to Send</th>
+                      <th width="50px"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Dynamically populated -->
+                  </tbody>
+                </table>
+              </div>
+              <button id="btn-add-iso-field" class="btn btn-small btn-secondary-outline" style="margin-top: 10px;">
+                + Add Custom Field
+              </button>
+            </div>
+          </div>
+
+          <!-- HTTP POST CONFIG FORM -->
+          <div id="form-http-post" class="test-form" style="display: none;">
+            <div class="form-section">
+              <h3>Ecommerce Integration Type</h3>
+              <div class="form-group row-inline">
+                <label for="http-subtype">Mode:</label>
+                <select id="http-subtype">
+                  <option value="standard">Standard HTTP POST Request</option>
+                  <option value="paydee">Paydee Gateway Flow (Key Exchange & MAC Sign)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- SUBFORM A: STANDARD HTTP -->
+            <div id="subform-standard" class="sub-form">
+              <div class="form-section">
+                <h3>Request Details</h3>
+                <div class="form-group">
+                  <label for="http-url">Target URL</label>
+                  <input type="text" id="http-url" value="https://httpbin.org/post">
+                </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="http-content-type">Content Type</label>
+                    <select id="http-content-type">
+                      <option value="application/json">application/json</option>
+                      <option value="application/x-www-form-urlencoded">application/x-www-form-urlencoded</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="http-expected-status">Expected Status</label>
+                    <input type="number" id="http-expected-status" value="200">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="http-expected-substring">Expect Response Content Substring (Optional)</label>
+                  <input type="text" id="http-expected-substring" placeholder="e.g. success or order_id">
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3>Payload Body</h3>
+                <textarea id="http-body" class="code-editor" placeholder="{\n  &quot;order_id&quot;: &quot;123&quot;\n}"></textarea>
+              </div>
+            </div>
+
+            <!-- SUBFORM B: PAYDEE GATEWAY -->
+            <div id="subform-paydee" class="sub-form" style="display: none;">
+              <div class="form-section">
+                <h3>Paydee Gate Endpoints</h3>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="paydee-keyex-url">Key Exchange URL (mkReq)</label>
+                    <input type="text" id="paydee-keyex-url" value="https://devlinkv2.paydee.co/mpigw/mkReq">
+                  </div>
+                  <div class="form-group">
+                    <label for="paydee-payment-url">Payment Request URL (mpReq)</label>
+                    <input type="text" id="paydee-payment-url" value="https://devlinkv2.paydee.co/mpigw/mpReq">
+                  </div>
+                </div>
+                <div class="form-group row-inline" style="margin-top: 10px;">
+                  <input type="checkbox" id="paydee-auto-trxn" checked>
+                  <label for="paydee-auto-trxn" style="margin-bottom: 0;">Auto-Generate Transaction ID (MPI_TRXN_ID) & Date (MPI_PURCH_DATE) on each run</label>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3>RSA Security Key Credentials</h3>
+                <div class="form-group">
+                  <label for="paydee-publickey">Merchant Public Key (PEM or raw string)</label>
+                  <textarea id="paydee-publickey" class="code-editor" style="height: 80px;"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="paydee-privatekey">Merchant Private Key (PEM format)</label>
+                  <textarea id="paydee-privatekey" class="code-editor" style="height: 120px;"></textarea>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3>Payload Parameters (Fields to submit and sign)</h3>
+                <div class="fields-table-container">
+                  <table class="fields-table" id="paydee-fields-table">
+                    <thead>
+                      <tr>
+                        <th width="200px">Parameter Key</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- Pre-defined keys populated dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </main>
+
+      <!-- RIGHT PANEL: CONSOLE LOGS & DETAILED INSPECTION -->
+      <aside class="inspector">
+        <div class="inspector-tabs">
+          <button class="inspector-tab active" data-tab="console">Diagnostics Console</button>
+          <button class="inspector-tab" data-tab="results">Data Inspector</button>
+        </div>
+
+        <div class="inspector-content">
+          
+          <!-- TAB 1: DIAGNOSTIC CONSOLE -->
+          <div id="tab-console" class="tab-pane active">
+            <div class="console-box">
+              <div class="console-header">
+                <span>Console Log Output</span>
+                <button id="btn-clear-console" class="btn-small btn-secondary-outline">Clear</button>
+              </div>
+              <div class="console-output" id="run-console-log">
+                <span class="system-message">System ready. Select a test case and click "Run Test" to view diagnostics log trace...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: DATA INSPECTOR -->
+          <div id="tab-results" class="tab-pane">
+            <div id="no-results-state" class="empty-state" style="padding-top: 50px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="opacity: 0.5; margin-bottom: 10px;">
+                <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1" />
+                <path d="M18 8h4a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-4" />
+                <path d="M8 10h4" />
+                <path d="M8 14h4" />
+              </svg>
+              <h4>No Runs Executed Yet</h4>
+              <p>Run the test case to parse response payloads and inspect field values.</p>
+            </div>
+
+            <div id="results-display" style="display: none;">
+              <!-- Verdict Banner -->
+              <div id="result-verdict-banner" class="verdict-banner pass">
+                <div class="verdict-status">PASSED</div>
+                <div class="verdict-details" id="result-verdict-details">Response Code: 00 (Approved) | Time: 120ms</div>
+              </div>
+
+              <!-- ISO8583 Decoded Fields -->
+              <div id="inspector-iso-section" style="display: none; margin-top: 20px;">
+                <h3>Decoded ISO8583 Fields</h3>
+                <div class="decoded-table-container">
+                  <table class="decoded-table">
+                    <thead>
+                      <tr>
+                        <th width="60px">Field</th>
+                        <th>Name</th>
+                        <th>Parsed Value</th>
+                      </tr>
+                    </thead>
+                    <tbody id="decoded-fields-body">
+                      <!-- Populated dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+
+                <h3 style="margin-top: 20px;">Raw Network Frames (Hex)</h3>
+                <div class="hex-dump-container">
+                  <span class="hex-label">SENT PAYLOAD (HEX):</span>
+                  <div class="hex-box" id="hex-sent"></div>
+                  <span class="hex-label" style="margin-top: 10px;">RECEIVED PAYLOAD (HEX):</span>
+                  <div class="hex-box highlight" id="hex-received"></div>
+                </div>
+              </div>
+
+              <!-- HTTP Response JSON/Text -->
+              <div id="inspector-http-section" style="display: none; margin-top: 20px;">
+                <h3>HTTP Response Payload</h3>
+                <div class="http-stats">
+                  <div><strong>HTTP Status:</strong> <span id="http-resp-status">200 OK</span></div>
+                  <div><strong>Roundtrip Duration:</strong> <span id="http-resp-time">120ms</span></div>
+                </div>
+                <div class="http-body-inspector">
+                  <pre><code id="http-resp-body-raw" class="code-block"></code></pre>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- FOOTER: ISO8583 MOCK TCP HOST CONTROLLER -->
+    <footer class="app-footer">
+      <div class="footer-control-panel">
+        <div class="mock-status-bar">
+          <div class="status-indicator" id="mock-status-indicator"></div>
+          <span class="mock-title">Local ISO8583 Mock Host Server: <strong id="mock-status-text">Active</strong></span>
+        </div>
+        
+        <div class="mock-controls">
+          <div class="form-group row-inline" style="margin-bottom: 0;">
+            <label for="mock-port">TCP Port:</label>
+            <input type="number" id="mock-port" value="8583" style="width: 80px; text-align: center;">
+          </div>
+          <button id="btn-toggle-mock" class="btn btn-secondary-outline btn-small">Stop Server</button>
+          <button id="btn-clear-mock-logs" class="btn btn-secondary-outline btn-small">Clear Logs</button>
+          <button id="btn-toggle-mock-drawer" class="btn-icon-footer" title="Toggle Mock Logs">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <polyline points="18 15 12 9 6 15" id="drawer-arrow"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- MOCK HOST LOG DRAWER -->
+      <div class="mock-logs-drawer" id="mock-logs-drawer" style="display: none;">
+        <div class="mock-logs-header">
+          <span>Incoming TCP Connection Diagnostics (Port <span id="mock-port-display">8583</span>)</span>
+        </div>
+        <div class="mock-logs-output" id="mock-logs-output">
+          <span class="mock-log-line sys">Mock host listening for incoming connections on port 8583...</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
